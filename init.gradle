@@ -1,0 +1,26 @@
+import javax.net.ssl.*
+import java.security.cert.X509Certificate
+
+// Configure the JVM to ignore SSL errors
+System.setProperty("javax.net.ssl.trustStore", "")
+System.setProperty("javax.net.ssl.trustStorePassword", "")
+System.setProperty("javax.net.ssl.trustStoreType", "JKS")
+System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "true")
+System.setProperty("jdk.tls.client.protocols", "TLSv1.2,TLSv1.3")
+System.setProperty("https.protocols", "TLSv1.2,TLSv1.3")
+
+// Create a TrustManager that accepts all certificates
+class TrustAllManager implements X509TrustManager {
+    X509Certificate[] getAcceptedIssuers() { null }
+    void checkClientTrusted(X509Certificate[] certs, String authType) {}
+    void checkServerTrusted(X509Certificate[] certs, String authType) {}
+}
+
+// Create an SSLContext that uses our TrustManager
+def trustAllCerts = [new TrustAllManager()] as X509TrustManager[]
+def sc = SSLContext.getInstance("TLS")
+sc.init(null, trustAllCerts, new java.security.SecureRandom())
+
+// Set the default SSL socket factory and hostname verifier
+HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
+HttpsURLConnection.setDefaultHostnameVerifier({ hostname, session -> true })

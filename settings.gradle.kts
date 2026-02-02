@@ -1,5 +1,6 @@
 pluginManagement {
     repositories {
+        maven { url = uri("file:///D:/projects/test-webview/repo") }
         google()
         mavenCentral()
         gradlePluginPortal()
@@ -9,6 +10,7 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
+        maven { url = uri("file:///D:/projects/test-webview/repo") }
         google()
         mavenCentral()
     }
