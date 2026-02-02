@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WebView Camera</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        .video-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #1a1a1a;
+            position: relative;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .controls {
+            padding: 20px;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .capture-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #fff;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+            position: relative;
+        }
+
+        .capture-button:active {
+            transform: scale(0.95);
+            background-color: #e0e0e0;
+        }
+
+        .capture-button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid #000;
+        }
+
+        .status-message {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            max-width: 90%;
+            transition: all 0.3s ease;
+        }
+
+        .status-message.success {
+            background-color: #4caf50;
+            color: #fff;
+        }
+
+        .status-message.error {
+            background-color: #f44336;
+            color: #fff;
+        }
+
+        .status-message.info {
+            background-color: #2196f3;
+            color: #fff;
+        }
+
+        .status-message.hidden {
+            display: none;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .error-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            padding: 20px;
+            max-width: 80%;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .error-text {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #fff;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="video-container">
+            <video id="video" autoplay playsinline muted></video>
+            
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <div class="loading-text">Initializing camera...</div>
+            </div>
+            
+            <div id="error" class="error-container hidden">
+                <div class="error-icon">📷</div>
+                <div class="error-text" id="errorText">Camera initialization failed</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div id="statusMessage" class="status-message hidden"></div>
+            <button id="captureButton" class="capture-button" disabled></button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const video = document.getElementById('video');
+        const captureButton = document.getElementById('captureButton');
+        const statusMessage = document.getElementById('statusMessage');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const errorText = document.getElementById('errorText');
+
+        // State
+        let cameraStream = null;
+        let isCapturing = false;
+
+        // Initialize camera when page loads
+        document.addEventListener('DOMContentLoaded', initCamera);
+
+        // Capture button click handler
+        captureButton.addEventListener('click', captureImage);
+
+        /**
+         * Initialize the camera using getUserMedia API
+         */
+        async function initCamera() {
+            try {
+                log('Initializing camera...');
+                
+                // Check if getUserMedia is supported
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('getUserMedia is not supported in this browser');
+                }
+
+                // Request camera access
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment', // Use rear camera by default
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                });
+
+                // Set video stream to video element
+                video.srcObject = cameraStream;
+                
+                // Wait for video to be ready
+                video.onloadedmetadata = () => {
+                    video.play();
+                    hideLoading();
+                    enableCaptureButton();
+                    showStatus('Camera ready', 'info', 2000);
+                    log('Camera initialized successfully');
+                };
+
+            } catch (err) {
+                log('Camera initialization failed: ' + err.message);
+                showError(err.message);
+            }
+        }
+
+        /**
+         * Capture the current frame from the video stream
+         */
+        function captureImage() {
+            if (isCapturing) return;
+            
+            try {
+                isCapturing = true;
+                log('Capturing image...');
+                
+                // Create canvas to draw the video frame
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                const context = canvas.getContext('2d');
+                
+                // Draw video frame to canvas
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Convert canvas to Base64 JPEG
+                const base64Data = canvas.toDataURL('image/jpeg', 0.9);
+                
+                // Send to native Android code
+                if (typeof AndroidBridge !== 'undefined') {
+                    AndroidBridge.saveImage(base64Data);
+                    showStatus('Image saved to gallery!', 'success');
+                    log('Image saved successfully');
+                } else {
+                    throw new Error('AndroidBridge not available');
+                }
+                
+            } catch (err) {
+                log('Capture failed: ' + err.message);
+                showStatus('Failed to capture image', 'error');
+            } finally {
+                isCapturing = false;
+            }
+        }
+
+        /**
+         * Show status message
+         */
+        function showStatus(message, type, duration = 3000) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message ' + type;
+            statusMessage.classList.remove('hidden');
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    statusMessage.classList.add('hidden');
+                }, duration);
+            }
+        }
+
+        /**
+         * Show error message
+         */
+        function showError(message) {
+            hideLoading();
+            errorText.textContent = message;
+            error.classList.remove('hidden');
+            captureButton.disabled = true;
+        }
+
+        /**
+         * Hide loading indicator
+         */
+        function hideLoading() {
+            loading.classList.add('hidden');
+        }
+
+        /**
+         * Enable capture button
+         */
+        function enableCaptureButton() {
+            captureButton.disabled = false;
+        }
+
+        /**
+         * Log message to console and native Android
+         */
+        function log(message) {
+            console.log('[WebViewCamera] ' + message);
+            if (typeof AndroidBridge !== 'undefined') {
+                AndroidBridge.log(message);
+            }
+        }
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Pause video when page is hidden
+                if (video) video.pause();
+            } else {
+                // Resume video when page is visible
+                if (video) video.play();
+            }
+        });
+
+        // Clean up when page is unloaded
+        window.addEventListener('beforeunload', () => {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
