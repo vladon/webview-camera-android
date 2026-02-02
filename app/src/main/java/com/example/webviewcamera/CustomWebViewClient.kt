@@ -9,7 +9,7 @@ import android.webkit.WebViewClient
  * CustomWebViewClient handles WebView page loading events.
  */
 class CustomWebViewClient : WebViewClient() {
-    
+     
     companion object {
         private const val TAG = "CustomWebViewClient"
     }
@@ -35,7 +35,7 @@ class CustomWebViewClient : WebViewClient() {
     }
     
     /**
-     * Called when the page starts loading.
+     * Called when a page starts loading.
      */
     override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
@@ -43,22 +43,10 @@ class CustomWebViewClient : WebViewClient() {
     }
     
     /**
-     * Called when the page starts loading.
+     * Called when a page starts loading.
      */
     override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
         super.onPageStarted(view, url, favicon)
         android.util.Log.d(TAG, "Page started loading: $url")
-    }
-    
-    /**
-     * Called when an error occurs while loading the page.
-     */
-    override fun onReceivedError(
-        view: WebView?,
-        request: WebResourceRequest?,
-        error: WebResourceError?
-    ) {
-        super.onReceivedError(view, request, error)
-        android.util.Log.e(TAG, "Error loading page: ${error?.description}")
     }
 }

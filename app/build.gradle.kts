@@ -50,6 +50,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/kotlinx_coroutines_core.version"
+            excludes += "/META-INF/kotlinx_coroutines_core-jvm.version"
         }
     }
 }

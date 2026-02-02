@@ -92,8 +92,8 @@ fun PermissionRequestHandler(
     onPermissionDenied: () -> Unit = {}
 ) {
     var permissionsGranted by remember { mutableStateOf(false) }
-    
-    val permissionHandler = remember { PermissionHandler(androidx.compose.ui.platform.LocalContext.current) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val permissionHandler = remember { PermissionHandler(context) }
     
     val multiplePermissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
